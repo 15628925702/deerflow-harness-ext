@@ -1,0 +1,22 @@
+[project]
+name = "deerflow-harness-ext"
+version = "0.1.0"
+description = "Model-agnostic harness strategy layer hosted on DeerFlow (D0 skeleton)"
+requires-python = ">=3.10"
+# core + policies are host-agnostic and stdlib-only, so the package core is
+# importable and testable without deerflow/langchain installed.
+dependencies = []
+
+[project.optional-dependencies]
+deerflow = ["deerflow", "langgraph", "langchain", "pyyaml"]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
