@@ -1,0 +1,84 @@
+# ~7 小时、单 key、顺序、禁止并发。不要用 run_all_benchmarks / BrowseComp。
+# python -X utf8 harness/examples/run_debug_suite.py --suite eval/long_eval.yaml --max-hours 7
+
+name: traces-long-eval-7h
+concurrency: 1
+key_policy: first_from_APODEX_KEYS
+model: apodex-1.1
+max_hours: 7
+pause_seconds_between_tasks: 3
+pause_seconds_between_llm_calls: 0
+
+stages:
+  - id: ew
+    title: executable-world（全 5 题）
+    skip_if_missing: false
+    tasks:
+      - {id: verify_solutions}
+      - {id: clinical_signal}
+      - {id: corpus_dedup}
+      - {id: treatment_response}
+      - {id: corpus_procurement}
+
+  - id: tac
+    title: TheAgentCompany 安装题（无 GitLab 依赖）
+    skip_if_missing: true
+    tasks:
+      - sde-install-go
+      - sde-install-openjdk
+
+  - id: sab
+    title: ScienceAgentBench verified 全量生成 + 本地短评
+    skip_if_missing: true
+    instance_count: 102
+    instance_offset: 0
+    self_debug: false
+    max_tokens: 4096
+    score: true
+    exec_timeout: 45
+    exec_budget_s: 2400
+
+  - id: dw
+    title: DiscoveryWorld Easy/Normal/Challenge + Small Skills
+    skip_if_missing: true
+    max_steps: 50
+    tasks:
+      # science Easy
+      - {scenario: "Combinatorial Chemistry", difficulty: Easy, seed: 0}
+      - {scenario: "Archaeology Dating", difficulty: Easy, seed: 0}
+      - {scenario: "Plant Nutrients", difficulty: Easy, seed: 0}
+      - {scenario: "Reactor Lab", difficulty: Easy, seed: 0}
+      - {scenario: "Lost in Translation", difficulty: Easy, seed: 0}
+      - {scenario: "Space Sick", difficulty: Easy, seed: 0}
+      - {scenario: Proteomics, difficulty: Easy, seed: 0}
+      - {scenario: "It's (not) Rocket Science!", difficulty: Easy, seed: 0}
+      # small skills
+      - {scenario: "Small Skills: Dialog Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Pick and Place Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Pick and Give Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Instrument Measurement Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Doors Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Doors with Keys Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Navigation in a House Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Search Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Discovery Feed Test", difficulty: Normal, seed: 0}
+      - {scenario: "Small Skills: Moving Agents Test", difficulty: Normal, seed: 0}
+      # science Normal
+      - {scenario: "Combinatorial Chemistry", difficulty: Normal, seed: 0}
+      - {scenario: "Archaeology Dating", difficulty: Normal, seed: 0}
+      - {scenario: "Plant Nutrients", difficulty: Normal, seed: 0}
+      - {scenario: "Reactor Lab", difficulty: Normal, seed: 0}
+      - {scenario: "Lost in Translation", difficulty: Normal, seed: 0}
+      - {scenario: "Space Sick", difficulty: Normal, seed: 0}
+      - {scenario: Proteomics, difficulty: Normal, seed: 0}
+      - {scenario: "It's (not) Rocket Science!", difficulty: Normal, seed: 0}
+      # science Challenge（时间够才跑到）
+      - {scenario: "Combinatorial Chemistry", difficulty: Challenge, seed: 0}
+      - {scenario: "Archaeology Dating", difficulty: Challenge, seed: 0}
+      - {scenario: "Plant Nutrients", difficulty: Challenge, seed: 0}
+      - {scenario: "Reactor Lab", difficulty: Challenge, seed: 0}
+      - {scenario: "Lost in Translation", difficulty: Challenge, seed: 0}
+      - {scenario: "Space Sick", difficulty: Challenge, seed: 0}
+      - {scenario: Proteomics, difficulty: Challenge, seed: 0}
+      - {scenario: "It's (not) Rocket Science!", difficulty: Challenge, seed: 0}
+      - {scenario: Tutorial, difficulty: Normal, seed: 0}

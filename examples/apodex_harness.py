@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 from typing import Any, Dict, List, Optional
 
@@ -82,23 +83,40 @@ def _model() -> str:
     return os.environ.get("APODEX_MODEL") or os.environ.get("OPENAI_MODEL") or "apodex-1.1-mini"
 
 
-def call_model(system: str, transcript: List[Dict[str, str]]) -> str:
+def call_model(system: str, transcript: List[Dict[str, str]], max_tokens: Optional[int] = None) -> str:
+    """One key only. On 429 wait and retry the same key — never rotate."""
     key = _key()
     if not key:
         raise RuntimeError("need APODEX_API_KEY")
+    if max_tokens is None:
+        max_tokens = int(os.environ.get("APODEX_MAX_TOKENS") or 1024)
     body = json.dumps({
         "model": _model(),
         "messages": [{"role": "system", "content": system}] + transcript,
         "stream": False,
-        "max_tokens": 1024,
+        "max_tokens": int(max_tokens),
     }).encode()
-    req = urllib.request.Request(
-        _base().rstrip("/") + "/chat/completions", data=body,
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + key})
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
     handlers = [urllib.request.ProxyHandler({"https": proxy, "http": proxy})] if proxy else []
-    with urllib.request.build_opener(*handlers).open(req, timeout=180) as r:
-        return json.loads(r.read())["choices"][0]["message"]["content"]
+    opener = urllib.request.build_opener(*handlers)
+    last = None
+    for attempt in range(8):
+        req = urllib.request.Request(
+            _base().rstrip("/") + "/chat/completions", data=body,
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + key})
+        try:
+            with opener.open(req, timeout=300 if int(max_tokens) > 2048 else 180) as r:
+                return json.loads(r.read())["choices"][0]["message"]["content"]
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code == 429:
+                time.sleep(min(60.0, 2.0 ** attempt))
+                continue
+            raise
+        except Exception as e:
+            last = e
+            time.sleep(min(30.0, 1.5 * (attempt + 1)))
+    raise RuntimeError(f"model call failed after retries: {last}")
 
 
 def _describe_actions(task) -> str:

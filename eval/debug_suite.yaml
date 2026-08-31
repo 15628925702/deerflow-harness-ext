@@ -1,0 +1,46 @@
+# TRACES 调试集：单 key、顺序、禁止并发。
+# 改 harness 后跑: python harness/examples/run_debug_suite.py
+
+name: traces-debug-suite
+concurrency: 1
+key_policy: first_from_APODEX_KEYS   # 只用第一把 key，丢掉 APODEX_KEYS 轮换
+model: apodex-1.1
+pause_seconds_between_tasks: 3
+pause_seconds_between_llm_calls: 0   # 429 由 call_model 退避
+
+stages:
+  - id: ew
+    title: executable-world（接口冒烟）
+    skip_if_missing: false
+    tasks:
+      - {id: verify_solutions, why: 最简单提交路径}
+      - {id: clinical_signal, why: gate（答案对但没核查仍零分）}
+      - {id: corpus_dedup, why: 双目标}
+      - {id: treatment_response, why: 选列+及时提交}
+      - {id: corpus_procurement, why: 陷阱/污染，最难}
+
+  - id: dw
+    title: DiscoveryWorld（发现过程分）
+    skip_if_missing: true   # 未 pip install 则跳过
+    max_steps: 50
+    tasks:
+      - {scenario: Proteomics, difficulty: Easy, seed: 0}
+      - {scenario: "Space Sick", difficulty: Easy, seed: 0}
+      - {scenario: "Plant Nutrients", difficulty: Easy, seed: 0}
+
+  - id: sab
+    title: ScienceAgentBench（交可执行程序）
+    skip_if_missing: true
+    # HF validation 前 3 条；完整打分需 SharePoint artifacts zip（密码见官方 README）
+    instance_count: 3
+    instance_offset: 0
+    self_debug: false
+
+  - id: tac
+    title: TheAgentCompany（少量检查点）
+    skip_if_missing: true   # api-server 未起来则跳过
+    tasks:
+      - sde-update-readme
+      - sde-install-go
+      - sde-install-openjdk
+      - sde-reply-community-issue-with-fixed-reply

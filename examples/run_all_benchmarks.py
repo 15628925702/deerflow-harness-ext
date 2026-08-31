@@ -57,6 +57,15 @@ def run_benchmark(name, rows, workers, sc):
 
 
 def main() -> int:
+    print(
+        "DEPRECATED: this runner uses workers + key rotation and will trip account rate limits.\n"
+        "Use: python harness/examples/run_debug_suite.py",
+        flush=True,
+    )
+    raise SystemExit(
+        "refusing to run: concurrency is disabled. "
+        "use harness/examples/run_debug_suite.py (single key, sequential)."
+    )
     ap = argparse.ArgumentParser()
     ap.add_argument("--sampled", required=True, help="dir containing <Name>.jsonl samples")
     ap.add_argument("--workers", type=int, default=12)
